@@ -1,0 +1,27 @@
+// Test 303
+program test303
+
+int i;
+int arr[];
+
+{
+	void main()
+	{
+		arr = new int[5];
+		arr[0] = 10;
+		arr[1] = 20;
+		arr[2] = 30;
+		arr[3] = 40;
+		arr[4] = 50;
+
+		
+		i = 0;
+		arr = arr.filter(x => x >= 20);
+		
+		foreach (i in range (0, 5)) {
+			print(arr[i]);
+			print(eol);
+		}
+		
+	}
+}

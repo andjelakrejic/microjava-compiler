@@ -1,0 +1,65 @@
+program TestMapAndFindAny
+
+    int niz[];
+    int resNiz[];
+    bool pronadjen;
+    int x; // Promenljiva koja služi kao iterator za map
+
+{
+    void main() {
+        // 1. Inicijalizacija niza
+        niz = new int[5];
+        niz[0] = 10;
+        niz[1] = 20;
+        niz[2] = 30;
+        niz[3] = 40;
+        niz[4] = 50;
+
+        // ================= TEST FINDANY =================
+        
+        // Tražimo element koji POSTOJI u nizu (30) -> treba da vrati true (1)
+        pronadjen = niz.findAny(30);
+        if (pronadjen) {
+            print('Y'); // Očekivani ispis: Y
+        } else {
+            print('N');
+        }
+        print(eol);
+
+        // Tražimo element koji NE POSTOJI u nizu (99) -> treba da vrati false (0)
+        pronadjen = niz.findAny(99);
+        if (pronadjen) {
+            print('Y');
+        } else {
+            print('N'); // Očekivani ispis: N
+        }
+        print(eol);
+
+        // Tražimo preko izraza (niz.findAny(10 + 10))
+        pronadjen = niz.findAny(10 + 10);
+        if (pronadjen) {
+            print('Y'); // Očekivani ispis: Y
+        } else {
+            print('N');
+        }
+        print(eol);
+
+        // ================= TEST MAP =================
+        
+        // Množimo svaki element niza sa 2 (x => x * 2)
+        x = 0;
+        resNiz = niz.map(x => x * 2);
+
+        // Provera rezultata: resNiz bi trebalo da ima [20, 40, 60, 80, 100]
+        print(resNiz[0]); // 20
+        print(eol);
+        print(resNiz[1]); // 40
+        print(eol);
+        print(resNiz[2]); // 60
+        print(eol);
+        print(resNiz[3]); // 80
+        print(eol);
+        print(resNiz[4]); // 100
+        print(eol);
+    }
+}

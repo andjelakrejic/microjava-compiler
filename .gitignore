@@ -1,0 +1,14 @@
+# Eclipse
+.settings/
+.metadata/
+
+# Build output
+bin/
+*.class
+
+# Logs
+logs/
+*.log
+
+# Generisani MicroJava bytecode iz testova
+*.obj

@@ -1,0 +1,400 @@
+
+
+package rs.ac.bg.etf.pp1;
+
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+parser code {:
+
+	boolean errorDetected;
+
+	Logger log = Logger.getLogger(getClass());
+   
+   
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+     
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+  
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+  
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	errorDetected = true;
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+
+
+:}
+
+init with {:
+	errorDetected = false;
+:}
+
+scan with {:
+	Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+terminal PROG, LBRACE, RBRACE, SEMI, COLON, LPAREN, RPAREN, EQUAL, RETURN,
+		PLUS, MINUS, MUL, DIV, MOD, COMMA, MAP, FINDANY,
+		PRINT, VOID, IF, ELSE, CONST, LBRACK, RBRACK, DOT, QUESTION,
+		EQUALEQUAL, NOTEQUAL, GREATEQUAL, LESSEQUAL, GREATER, LESSER,
+		BREAK, CONTINUE, READ, FOR, INC, DEC, NEW, LENGTH, LOGOR, LOGAND,
+		WHILE, DO, GOTO;
+		
+terminal Integer NUMBER, BOOL;
+terminal String IDENT;
+terminal Character CHARACTER;
+
+terminal MAX, FINAL, FOREACH, INRANGE, CONTAINS, FILTER;
+nonterminal VarDeclPrefix, ForeachBegin, ForeachStoreStart, ForeachStoreEnd, ContainsBegin, FilterBegin;
+ 
+nonterminal Program, ProgramName, ConVarDeclList, ConDecList, ConDecl, ConDeclMore;
+nonterminal VarDeclList, VarDecl, VarDeclMore, VarDeclListRec;
+nonterminal Constant, MethodDeclList, MethodDecl;
+nonterminal FormPar, FormParMore, FormParList;
+nonterminal Addop, Mulop, Assignop, Relop;
+nonterminal Unary, ActPar, ActParMore, ActParList, ActParBegin;
+nonterminal AllStatement, Statement, StatementList, ElseStmt, Statement_f_des, Statement_f_con;
+nonterminal DesignatorStatement, ForBegin, ForCond, ForStep, ArrBase;
+nonterminal Else;
+nonterminal WhileNonterm, DoNonterm, WhileBegin, WhileCond, Label, ExprElse;
+nonterminal MapBegin, FindAnyBegin;
+
+
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorSub, Expr, ExprBasic, TermList, Term, AddopTermList,
+													Condition, CondFactList, CondTerm, CondTermList, CondFact; // ove klase (i sve izvedene) kad se prevedu bice tipa struct 
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorList, DesignatorName;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj MethRetAndName;
+precedence left ELSE;
+
+
+Program ::= (Program) PROG ProgramName ConVarDeclList LBRACE MethodDeclList RBRACE;
+
+ProgramName ::= (ProgramName) IDENT;
+
+ConVarDeclList ::= 	(ConVarDeclList_con) ConVarDeclList ConDecList
+						|
+						(ConVarDeclList_var) ConVarDeclList VarDeclList
+						|
+						(ConVarDeclList_e) /* epsilon */
+						;
+						
+/* const int x = 1, const int y = 2, z = 3; */					
+ConDecList ::= (ConDecList) CONST Type ConDecl ConDeclMore SEMI;
+
+ConDecl ::= (ConDecl) IDENT EQUAL Constant;
+
+ConDeclMore ::= (ConDeclMore_comma) COMMA ConDecl ConDeclMore
+				|
+				(ConDeclMore_e) /* epsilon */
+				;
+
+Constant ::= 	(Constant_num) NUMBER
+				|
+				(Constant_char) CHARACTER
+				|
+				(Constant_bool) BOOL
+				;
+/* int x; int x, y, z; int x[], y; */
+
+VarDeclList ::= (VarDeclList) VarDeclPrefix Type VarDecl VarDeclMore SEMI;
+
+VarDeclPrefix ::= 	(VarDeclPrefix_final) FINAL
+					|
+					(VarDeclPrefix_e) /* epsilon */
+					;
+
+VarDecl ::= 	(VarDecl_var) IDENT
+				|
+				(VarDecl_array) IDENT LBRACK RBRACK
+				;
+
+VarDeclMore ::= 	(VarDeclMore_comma) COMMA VarDecl VarDeclMore
+					|
+					(VarDeclMore_e) /* epsilon */
+					;
+
+
+Type ::= (Type) IDENT;
+
+MethodDeclList ::= 	(MethodDeclList_list) MethodDeclList MethodDecl
+					|
+					(MethodDeclList_e) /* epsilon */
+					;
+				
+MethodDecl ::= 	(MethodDecl) MethRetAndName LPAREN FormParList RPAREN VarDeclListRec LBRACE StatementList RBRACE;
+				
+MethRetAndName ::= 	(MethRetAndName_type) Type IDENT
+					|
+					(MethRetAndName_void) VOID IDENT
+					;
+
+FormParList ::= 	(FormParList_rec) FormPar FormParMore
+					|
+					(FormParList_e)
+					;
+
+FormParMore ::= (FormParMore_comma) COMMA FormPar FormParMore
+				|
+				(FormParMore_e) /* epsilon */
+				;
+				
+FormPar ::= (FormPar_var) Type IDENT  
+			|
+			(FormPar_array) Type IDENT LBRACK RBRACK
+			; 
+					
+
+VarDeclListRec ::= 	(VarDeclListRec_rec) VarDeclListRec VarDeclList
+					|
+					(VarDeclListRec_e) /* epsilon */
+					;
+				
+// Dodatak projekta: 	Statement := Designator ʺ=ʺ Designator ʺ.ʺ ʺmapʺ "(" ident "=>" Expr ")" ";"
+// 						Statement := Designator ʺ=ʺ Designator ʺ.ʺ ʺfindAnyʺ "(" Expr ")" ";".
+// Stavljeno u DesignatorList
+
+AllStatement ::= 	(AllStatement_s) Statement
+					|
+					(AllStatement_label) Label COLON Statement
+					;
+
+Label ::= (Label) IDENT;
+
+Statement ::= 	(Statement_des) DesignatorStatement SEMI 
+				|
+				(Statement_if) IF LPAREN Condition RPAREN AllStatement ElseStmt 
+				|
+				(Statement_break) BREAK SEMI 
+				|
+				(Statement_continue) CONTINUE SEMI 
+				|
+				(Statement_return1) RETURN SEMI 
+				|
+				(Statement_return2) RETURN Expr SEMI 
+				|
+				(Statement_read) READ LPAREN Designator RPAREN SEMI 
+				|
+				(Statement_print1) PRINT LPAREN Expr RPAREN SEMI 
+				|
+				(Statement_print2) PRINT LPAREN Expr COMMA NUMBER RPAREN SEMI 
+				|
+				(Statement_do) DoNonterm AllStatement WhileNonterm LPAREN Condition RPAREN SEMI
+				|
+				(Statement_while) WHILE LPAREN WhileCond Condition RPAREN WhileBegin AllStatement
+				|
+				(Statement_for) FOR LPAREN Statement_f_des SEMI ForCond Statement_f_con SEMI ForStep Statement_f_des RPAREN ForBegin AllStatement
+				|
+				(Statement_foreach) FOREACH LPAREN IDENT INRANGE LPAREN Expr ForeachStoreStart COMMA Expr ForeachStoreEnd RPAREN RPAREN ForeachBegin AllStatement
+				|
+				(Statement_goto) GOTO IDENT SEMI
+				|
+				(Statement_list) LBRACE StatementList RBRACE
+				;
+				
+				
+ElseStmt ::= 	(ElseStmt_yes) Else AllStatement
+				|
+				(ElseStmt_no) /* epsilon */
+				;
+					
+Else ::= (Else) ELSE;	
+
+ForeachBegin ::= (ForeachBegin) /* epsilon */;
+ForeachStoreStart ::= (ForeachStoreStart) /* epsilon */;
+ForeachStoreEnd ::= (ForeachStoreEnd) /* epsilon */;
+				
+
+ForBegin ::= (ForBegin) /* epsilon */;
+ForCond ::= (ForCond) /* epsilon */;
+ForStep ::= (ForStep) /* epsilon */;
+
+// do While
+WhileNonterm ::= (WhileNonterm) WHILE;
+DoNonterm ::= (DoNonterm) DO;
+
+// While
+WhileBegin ::= (WhileBegin) /* epsilon */;
+WhileCond ::= (WhileCond) /* epsilon */;
+						
+Statement_f_des ::= 	(Statement_f_des_des) DesignatorStatement
+						|
+						(Statement_f_des_e) /* epsilon */
+						;
+						
+Statement_f_con ::= 	(Statement_f_con_c) Condition
+						|
+						(Statement_f_con_e) /* epsilon */
+						;
+						
+StatementList ::= 	(StatementList_s) StatementList AllStatement
+					|
+					(StatementList_e) /* epsilon */
+					;
+					
+Condition ::= (Condition) CondTermList;
+
+CondTermList ::= 	(CondTermList_or) CondTermList LOGOR CondTerm
+				 	|
+					(CondTermList_ct) CondTerm
+					;
+
+CondTerm ::= (CondTerm) CondFactList;
+
+CondFactList ::= 	(CondFactList_and) CondFactList LOGAND CondFact 
+				 	|
+					(CondFactList_cf) CondFact
+					;
+					
+CondFact ::= 	(CondFact_expr) ExprBasic 
+				|
+				(CondFact_rel) ExprBasic Relop ExprBasic
+				;
+											
+DesignatorStatement ::= (DesignatorStatement_assign) Designator Assignop Expr
+						|
+						(DesignatorStatement_meth) Designator LPAREN ActParList RPAREN
+						|
+						(DesignatorStatement_inc) Designator INC
+						|
+						(DesignatorStatement_dec) Designator DEC
+						|
+						(DesignatorStatement_error) error:e
+						{: parser.report_error("Oporavak od greske u DS. Linija: " + eleft, null); :}
+						;
+												
+ActParList ::= 		(ActParList_rec) ActParBegin ActPar ActParMore
+					|
+					(ActParList_e) ActParBegin
+					;
+					
+ActParBegin ::= (ActParBegin) /* epsilon */;
+
+ActParMore ::= 	(ActParMore_comma) COMMA ActPar ActParMore
+				|
+				(ActParMore_e) /* epsilon */
+				;
+				
+ActPar ::= 	(ActPar) Expr;
+
+Expr ::= 	(Expr_bas) ExprBasic
+			|
+			(Expr_con) Condition QUESTION Expr ExprElse COLON Expr
+			;
+						
+ExprElse ::= (ExprElse) /* epsilon */;
+			
+ExprBasic ::= (ExprBasic) AddopTermList;			
+
+AddopTermList ::= 	(AddopTermList_list) AddopTermList Addop Term
+					|
+					(AddopTermList_term) Term
+					;
+
+Term ::= (Term) TermList;
+
+TermList ::= 	(TermList_list) TermList Mulop Factor 
+				|
+				(TermList_factor) Factor
+				;
+				
+Factor ::= (Factor) Unary FactorSub;
+
+Unary ::= 	(Unary_m) MINUS
+			|
+			(Unary_e) /* epsilon */
+			;
+
+FactorSub ::= 	(FactorSub_var) Designator
+				|
+				(FactorSub_meth) Designator LPAREN ActParBegin ActParList RPAREN
+				|
+				(FactorSub_num) NUMBER
+				|
+				(FactorSub_c) CHARACTER
+				|
+				(FactorSub_b) BOOL
+				|
+				(FactorSub_new_array) NEW Type LBRACK Expr RBRACK
+				|
+				(FactorSub_new_type) NEW Type
+				|
+				(FactorSub_expr) LPAREN Expr RPAREN
+				|
+				(FactorSub_maxArr) MAX Designator
+				; 
+				 
+DesignatorName ::= (DesignatorName) IDENT;
+				
+Designator ::= (Designator) DesignatorName DesignatorList;
+
+DesignatorList ::= 	(DesignatorList_ident) DesignatorList DOT IDENT 
+				    |
+				    (DesignatorList_length) DesignatorList DOT LENGTH
+				    |
+				    (DesignatorList_expr) DesignatorList LBRACK ArrBase Expr RBRACK				    
+				    |
+				    (DesignatorList_map) DesignatorList DOT MAP LPAREN IDENT Assignop GREATER MapBegin Expr RPAREN
+				    |
+				    (DesignatorList_findany) DesignatorList DOT FINDANY LPAREN FindAnyBegin Expr RPAREN
+				    |
+				    (DesignatorList_contains) DesignatorList DOT CONTAINS LPAREN ContainsBegin Expr RPAREN
+				    |
+				    (DesignatorList_filter) DesignatorList DOT FILTER LPAREN IDENT Assignop GREATER FilterBegin Condition RPAREN
+				    |
+				    (DesignatorList_e) /* epsilon */
+				   	;	
+	   	
+MapBegin ::= (MapBegin) /* epsilon */;
+FindAnyBegin ::= (FindAnyBegin) /* epsilon */;
+
+ContainsBegin ::= (ContainsBegin) /* epsilon */;
+FilterBegin ::= (FilterBegin) /* epsilon */;
+	
+ArrBase ::= (ArrBase) /* epsilon */;
+
+Assignop ::= (Assignop) EQUAL;
+
+
+Relop ::= 	(Relop_ee) EQUALEQUAL
+			|
+			(Relop_ne) NOTEQUAL
+			|
+			(Relop_g) GREATER
+			|
+			(Relop_ge) GREATEQUAL
+			|
+			(Relop_l) LESSER
+			|
+			(Relop_le) LESSEQUAL
+			;
+	
+
+Addop ::= 	(Addop_plus) PLUS
+			|
+			(Addop_min) MINUS
+			;
+
+Mulop ::= 	(Mulop_mul) MUL
+			|
+			(Mulop_div) DIV
+			|
+			(Mulop_mod) MOD
+			;
